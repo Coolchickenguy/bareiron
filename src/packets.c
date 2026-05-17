@@ -638,6 +638,8 @@ int cs_clickContainer (int client_fd) {
     } else
     #endif
     {
+      // Prevent accessing crafting-related slots when craft_items is locked
+      if (slot > 40 && player->flags & 0x80) return 1;
       p_item = &player->inventory_items[slot];
       p_count = &player->inventory_count[slot];
     }
@@ -811,7 +813,10 @@ int cs_setHeldItem (int client_fd) {
   PlayerData *player;
   if (getPlayerData(client_fd, &player)) return 1;
 
-  player->hotbar = (uint8_t)readUint16(client_fd);
+  uint8_t slot = readUint16(client_fd);
+  if (slot >= 9) return 1;
+
+  player->hotbar = slot;
 
   return 0;
 }
@@ -845,6 +850,8 @@ int cs_closeContainer (int client_fd) {
     }
     player->craft_items[i] = 0;
     player->craft_count[i] = 0;
+    // Unlock craft_items
+    player->flags &= ~0x80;
   }
 
   givePlayerItem(player, player->flagval_16, player->flagval_8);
